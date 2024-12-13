@@ -1,29 +1,30 @@
-from flask import Flask
+from flask import Flask, jsonify
 import requests
 import json
 import sqlite3
+import os
 
 
 app = Flask(__name__)
-
+PORT = int(os.getenv('PORT', 5000))
 
 def get_bird(state: str):
     conn = sqlite3.connect("./birds.db")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    print(f"select * from birds where abbreviation = '{state}';")
-    row = cursor.execute(f"select * from birds where abbreviation = '{state}';")
-    res = row.fetchall()
-    list_accumulator = []
-    for item in res:
-        print(item)
-        list_accumulator.append({k: item[k] for k in item.keys()})
-    return json.dumps(list_accumulator)
+
+    cursor.execute("SELECT * FROM birds WHERE abbreviation = ?", (state,))
+    res = cursor.fetchall()
+    return [dict(item) for item in res]
 
 
 def get_weather(state: str):
-    r = requests.get(f'https://api.weather.gov/alerts/active?area={{abbreviation}}')
-    return r.json()
+    try:
+        r = requests.get(f'https://api.weather.gov/alerts/active?area={state}')
+        r.raise_for_status()
+        return r.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
 
 
 @app.get('/')
@@ -42,4 +43,13 @@ def bird(state):
     print(weather)
     out = str([bird, weather])
     return out, 200, {'Content-Type': 'application/json'}
+
+
+@app.get('/health')
+def health():
+    return jsonify({"status": "healthy"}), 200
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=PORT)
 

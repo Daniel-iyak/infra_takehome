@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: nginx
-  pullPolicy: IfNotPresent
+  repository: birds-app
+  pullPolicy: Never
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -37,8 +37,20 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
-  port: 80
+  type: NodePort
+  port: 5000
+
+env:
+  - name: PORT
+    value: "5000"
+  - name: DB_PATH
+    value: "/data/birds.db"
+
+# Add volume for database
+persistence:
+  enabled: true
+  mountPath: /data
+  size: 1Gi
 
 ingress:
   enabled: false
